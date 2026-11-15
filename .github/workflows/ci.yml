@@ -19,5 +19,27 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - name: Verify in Docker Compose
-        run: COMPOSE_DISABLE_ENV_FILE=1 docker compose run --build --rm --no-deps ai-check
+        with:
+          persist-credentials: false
+      - name: Validate Compose configuration
+        run: COMPOSE_DISABLE_ENV_FILE=1 docker compose -f compose.yaml config --quiet
+      - name: Validate development Compose contract
+        run: COMPOSE_DISABLE_ENV_FILE=1 python3 scripts/test_compose_contract.py
+      - name: Run lint, type checks, and tests in Docker Compose
+        run: COMPOSE_DISABLE_ENV_FILE=1 docker compose -p ai-ci-check -f compose.yaml run --build --rm --no-deps ai-check
+      - name: Start runtime and wait for health
+        env:
+          AI_SERVICE_PORT: "18080"
+        run: COMPOSE_DISABLE_ENV_FILE=1 docker compose -p ai-ci-runtime -f compose.yaml up --build --wait --wait-timeout 180 ai-service
+      - name: Verify exact health response
+        run: >-
+          python3 -c "from urllib.request import urlopen;
+          response = urlopen('http://127.0.0.1:18080/health');
+          assert response.status == 200;
+          assert response.read() == b'{\"status\":\"ok\"}'"
+      - name: Show runtime logs on failure
+        if: failure()
+        run: COMPOSE_DISABLE_ENV_FILE=1 docker compose -p ai-ci-runtime -f compose.yaml logs --no-color --tail 80 ai-service
+      - name: Stop runtime
+        if: always()
+        run: COMPOSE_DISABLE_ENV_FILE=1 docker compose -p ai-ci-runtime -f compose.yaml down --remove-orphans
