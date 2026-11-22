@@ -4,3 +4,6 @@
 .ruff_cache/
 __pycache__/
 *.py[cod]
+
+# Local AI onboarding instructions; share separately, never commit.
+/AGENTS.md
