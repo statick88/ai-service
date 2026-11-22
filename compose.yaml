@@ -1,0 +1,29 @@
+services:
+  ai-service:
+    build:
+      context: .
+      target: development
+    ports:
+      - "127.0.0.1:${AI_SERVICE_PORT:-8000}:8000"
+    volumes:
+      - type: bind
+        source: ./app
+        target: /app/app
+        read_only: true
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "from urllib.request import urlopen; response = urlopen('http://127.0.0.1:8000/health'); assert response.status == 200"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  ai-check:
+    profiles: [ci]
+    build:
+      context: .
+      target: check
+    command: ["/bin/sh", "-c", "ruff check app tests && mypy app tests && python -m pytest"]

@@ -1,0 +1,22 @@
+*
+!Dockerfile
+!.dockerignore
+!pyproject.toml
+!requirements.txt
+!requirements-dev.txt
+!app/
+!app/**
+!tests/
+!tests/**
+
+# Never include credentials, even if accidentally placed under an allowed source directory.
+**/.env
+**/.env.*
+**/secrets
+**/secrets/**
+**/.ssh
+**/.ssh/**
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
